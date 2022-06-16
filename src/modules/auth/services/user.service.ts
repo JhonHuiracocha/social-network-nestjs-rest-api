@@ -3,21 +3,21 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { from, map, switchMap, Observable, of } from 'rxjs';
 import { In, Repository } from 'typeorm';
 import { FriendRequest } from '../entities/friend-request.entity';
-import { User } from '../entities/user.entity';
+import { UserEntity } from '../entities/user.entity';
 import { FriendRequestStatus } from '../entities/friend-request-status.enum';
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(FriendRequest)
     private readonly friendRequestRepository: Repository<FriendRequest>,
   ) {}
 
-  findUserById(id: string): Observable<User> {
+  findUserById(id: string): Observable<UserEntity> {
     return from(this.userRepository.findOne({ where: { id } })).pipe(
-      map((user: User) => {
+      map((user: UserEntity) => {
         if (!user) {
           throw new HttpException('User not found', HttpStatus.NOT_FOUND);
         }
@@ -28,8 +28,8 @@ export class UserService {
   }
 
   hasRequestBeenSentOrReceived(
-    creator: User,
-    receiver: User,
+    creator: UserEntity,
+    receiver: UserEntity,
   ): Observable<boolean> {
     return from(
       this.friendRequestRepository.findOne({
@@ -48,13 +48,13 @@ export class UserService {
 
   sendFriendRequest(
     receiverId: string,
-    creator: User,
+    creator: UserEntity,
   ): Observable<FriendRequest | { error: string }> {
     if (receiverId === creator.id)
       return of({ error: 'It is not possible to add yourself!' });
 
     return this.findUserById(receiverId).pipe(
-      switchMap((receiver: User) => {
+      switchMap((receiver: UserEntity) => {
         return this.hasRequestBeenSentOrReceived(creator, receiver).pipe(
           switchMap((hasRequestBeenSentOrReceived: boolean) => {
             if (hasRequestBeenSentOrReceived)
@@ -93,7 +93,7 @@ export class UserService {
     );
   }
 
-  getFriends(currentUser: User): Observable<User[]> {
+  getFriends(currentUser: UserEntity): Observable<UserEntity[]> {
     return from(
       this.friendRequestRepository.find({
         where: [

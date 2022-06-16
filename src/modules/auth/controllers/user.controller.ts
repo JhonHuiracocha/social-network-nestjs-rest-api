@@ -4,7 +4,7 @@ import { UserService } from '../services/user.service';
 import { CreateFriendRequestDto } from '../dto/create-friend-request.dto';
 import { FriendRequest } from '../entities/friend-request.entity';
 import { FriendRequestStatus } from '../entities/friend-request-status.enum';
-import { User } from '../entities/user.entity';
+import { UserEntity } from '../entities/user.entity';
 
 @Controller('users')
 export class UserController {
@@ -33,7 +33,7 @@ export class UserController {
   }
 
   @Get('friends/my')
-  getFriends(@Body() user: User): Observable<User[]> {
+  getFriends(@Body() user: UserEntity): Observable<UserEntity[]> {
     return this.userService.getFriends(user);
   }
 }

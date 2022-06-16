@@ -1,5 +1,12 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { User } from './user.entity';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { UserEntity } from './user.entity';
 import { FriendRequestStatus } from './friend-request-status.enum';
 
 @Entity('friend_requests')
@@ -7,15 +14,19 @@ export class FriendRequest {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => User, (user) => user.sentFriendRequest, {
+  @ManyToOne(() => UserEntity, (userEntity) => userEntity.sentFriendRequest, {
     nullable: false,
   })
-  creator: User;
+  creator: UserEntity;
 
-  @ManyToOne(() => User, (user) => user.receivedFriendRequests, {
-    nullable: false,
-  })
-  receiver: User;
+  @ManyToOne(
+    () => UserEntity,
+    (userEntity) => userEntity.receivedFriendRequests,
+    {
+      nullable: false,
+    },
+  )
+  receiver: UserEntity;
 
   @Column({
     type: 'enum',
@@ -23,4 +34,10 @@ export class FriendRequest {
     default: FriendRequestStatus.PENDING,
   })
   status: FriendRequestStatus;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
