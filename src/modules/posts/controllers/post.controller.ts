@@ -23,8 +23,8 @@ export class PostController {
 
   @Get()
   findPosts(
-    @Query('take', ParseIntPipe) take: number,
-    @Query('skip', ParseIntPipe) skip: number,
+    @Query('take') take: number,
+    @Query('skip') skip: number,
   ): Observable<PostEntity[]> {
     take = take > 20 ? 20 : take;
     return this.postService.findPosts(take, skip);

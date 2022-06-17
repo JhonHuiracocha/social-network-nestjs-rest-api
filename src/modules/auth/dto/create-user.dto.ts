@@ -1,5 +1,6 @@
 import { IsArray, IsBoolean, IsNotEmpty, IsString } from 'class-validator';
 import { FriendRequest } from '../entities/friend-request.entity';
+import { PostEntity } from '../../posts/entities/post.entity';
 
 export class CreateUserDto {
   @IsString()
@@ -23,6 +24,9 @@ export class CreateUserDto {
 
   @IsBoolean()
   status?: boolean;
+
+  @IsArray()
+  posts?: PostEntity[];
 
   @IsArray()
   sentFriendRequest?: FriendRequest[];

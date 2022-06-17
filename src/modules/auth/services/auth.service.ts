@@ -2,13 +2,16 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { from, switchMap, Observable, of, map, tap } from 'rxjs';
+import { JwtService } from '@nestjs/jwt';
 import { UserEntity } from '../entities/user.entity';
 import { CreateUserDto } from '../dto/create-user.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(UserEntity) private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
+    private readonly jwtService: JwtService,
   ) {}
 
   doesUserExist(email: string): Observable<boolean> {
@@ -32,6 +35,32 @@ export class AuthService {
         return from(this.userRepository.save(createUserDto)).pipe(
           map((user: UserEntity) => user),
         );
+      }),
+    );
+  }
+
+  validateUser(email: string, password: string): Observable<UserEntity> {
+    return from(
+      this.userRepository.findOne({ where: { email, password, status: true } }),
+    ).pipe(
+      map((user: UserEntity) => {
+        if (user && user.password !== password)
+          throw new HttpException(
+            'User or email is invalid',
+            HttpStatus.BAD_REQUEST,
+          );
+        delete user.password;
+        return user;
+      }),
+    );
+  }
+
+  login(user: UserEntity): Observable<string> {
+    const { email, password } = user;
+    console.log(user);
+    return this.validateUser(email, password).pipe(
+      switchMap((user: UserEntity) => {
+        if (user) return from(this.jwtService.signAsync({ user }));
       }),
     );
   }
