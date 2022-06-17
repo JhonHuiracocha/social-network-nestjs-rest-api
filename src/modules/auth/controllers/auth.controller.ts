@@ -1,22 +1,22 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { map, Observable } from 'rxjs';
 import { AuthService } from '../services/auth.service';
-import { UserEntity } from '../../users/entities/user.entity';
-import { CreateUserDto } from '../../users/dto/create-user.dto';
+import { CreateLoginDto } from '../dto/login.dto';
+import { CreateRegisterDto } from '../dto/register.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('register')
-  register(@Body() createUserDto: CreateUserDto) {
-    return this.authService.registerAccount(createUserDto);
+  register(@Body() createRegisterDto: CreateRegisterDto) {
+    return this.authService.registerAccount(createRegisterDto);
   }
 
   @Post('login')
-  login(@Body() user: UserEntity): Observable<{ token: string }> {
+  login(@Body() createLoginDto: CreateLoginDto): Observable<{ token: string }> {
     return this.authService
-      .login(user)
+      .login(createLoginDto)
       .pipe(map((jwt: string) => ({ token: jwt })));
   }
 }

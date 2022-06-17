@@ -18,9 +18,8 @@ export class CreateUserDto {
   @IsString()
   password: string;
 
-  @IsNotEmpty()
   @IsString()
-  imgUrl: string;
+  imgUrl?: string;
 
   @IsBoolean()
   status?: boolean;

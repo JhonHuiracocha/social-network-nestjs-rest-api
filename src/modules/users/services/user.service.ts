@@ -21,7 +21,6 @@ export class UserService {
         if (!user) {
           throw new HttpException('User not found', HttpStatus.NOT_FOUND);
         }
-        delete user.password;
         return user;
       }),
     );

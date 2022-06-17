@@ -1,10 +1,13 @@
+import * as bcrypt from 'bcrypt';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { from, switchMap, Observable, of, map, tap } from 'rxjs';
 import { JwtService } from '@nestjs/jwt';
 import { UserEntity } from '../../users/entities/user.entity';
-import { CreateUserDto } from '../../users/dto/create-user.dto';
+import { JWTPayload } from '../interfaces/auth.interface';
+import { CreateLoginDto } from '../dto/login.dto';
+import { CreateRegisterDto } from '../dto/register.dto';
 
 @Injectable()
 export class AuthService {
@@ -14,6 +17,10 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
+  hashPassword(password: string): Observable<string> {
+    return from(bcrypt.hash(password, 12));
+  }
+
   doesUserExist(email: string): Observable<boolean> {
     return from(this.userRepository.findOne({ where: { email } })).pipe(
       switchMap((user: UserEntity) => {
@@ -22,8 +29,10 @@ export class AuthService {
     );
   }
 
-  registerAccount(createUserDto: CreateUserDto): Observable<UserEntity> {
-    return this.doesUserExist(createUserDto.email).pipe(
+  registerAccount(
+    createRegisterDto: CreateRegisterDto,
+  ): Observable<UserEntity> {
+    return this.doesUserExist(createRegisterDto.email).pipe(
       tap((doesUserExist: boolean) => {
         if (doesUserExist)
           throw new HttpException(
@@ -32,8 +41,11 @@ export class AuthService {
           );
       }),
       switchMap(() => {
-        return from(this.userRepository.save(createUserDto)).pipe(
-          map((user: UserEntity) => user),
+        return this.hashPassword(createRegisterDto.password).pipe(
+          switchMap((hashedPassword: string) => {
+            createRegisterDto.password = hashedPassword;
+            return from(this.userRepository.save(createRegisterDto));
+          }),
         );
       }),
     );
@@ -41,26 +53,39 @@ export class AuthService {
 
   validateUser(email: string, password: string): Observable<UserEntity> {
     return from(
-      this.userRepository.findOne({ where: { email, password, status: true } }),
+      this.userRepository.findOne({ where: { email, status: true } }),
     ).pipe(
-      map((user: UserEntity) => {
-        if (!user || user.password !== password)
+      switchMap((user: UserEntity) => {
+        if (!user)
           throw new HttpException(
-            'Incorrect email or password.',
+            'Invalid Credentials.',
             HttpStatus.UNAUTHORIZED,
           );
 
-        delete user.password;
-        return user;
+        return from(bcrypt.compare(password, user.password)).pipe(
+          map((isValidPassword: boolean) => {
+            if (!isValidPassword)
+              throw new HttpException(
+                'Invalid Credentials.',
+                HttpStatus.UNAUTHORIZED,
+              );
+
+            return user;
+          }),
+        );
       }),
     );
   }
 
-  login(user: UserEntity): Observable<string> {
-    const { email, password } = user;
+  login(createLoginDto: CreateLoginDto): Observable<string> {
+    const { email, password } = createLoginDto;
+
     return this.validateUser(email, password).pipe(
       switchMap((user: UserEntity) => {
-        if (user) return from(this.jwtService.signAsync({ user }));
+        if (user) {
+          const payload: JWTPayload = { userId: user.id };
+          return from(this.jwtService.signAsync(payload));
+        }
       }),
     );
   }
