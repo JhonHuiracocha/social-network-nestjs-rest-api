@@ -1,5 +1,5 @@
 import { IsArray, IsBoolean, IsNotEmpty, IsString } from 'class-validator';
-import { FriendRequest } from '../entities/friend-request.entity';
+import { FriendRequestEntity } from '../entities/friend-request.entity';
 import { PostEntity } from '../../posts/entities/post.entity';
 
 export class CreateUserDto {
@@ -29,8 +29,8 @@ export class CreateUserDto {
   posts?: PostEntity[];
 
   @IsArray()
-  sentFriendRequest?: FriendRequest[];
+  sentFriendRequest?: FriendRequestEntity[];
 
   @IsArray()
-  receivedFriendRequests?: FriendRequest[];
+  receivedFriendRequests?: FriendRequestEntity[];
 }

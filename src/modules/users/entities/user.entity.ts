@@ -6,7 +6,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { FriendRequest } from './friend-request.entity';
+import { FriendRequestEntity } from './friend-request.entity';
 import { PostEntity } from '../../posts/entities/post.entity';
 
 @Entity('users')
@@ -38,9 +38,15 @@ export class UserEntity {
   @OneToMany(() => PostEntity, (postEntity) => postEntity.author)
   posts: PostEntity[];
 
-  @OneToMany(() => FriendRequest, (friendRequest) => friendRequest.creator)
-  sentFriendRequest: FriendRequest[];
+  @OneToMany(
+    () => FriendRequestEntity,
+    (friendRequestEntity) => friendRequestEntity.creator,
+  )
+  sentFriendRequest: FriendRequestEntity[];
 
-  @OneToMany(() => FriendRequest, (friendRequest) => friendRequest.receiver)
-  receivedFriendRequests: FriendRequest[];
+  @OneToMany(
+    () => FriendRequestEntity,
+    (friendRequestEntity) => friendRequestEntity.receiver,
+  )
+  receivedFriendRequests: FriendRequestEntity[];
 }

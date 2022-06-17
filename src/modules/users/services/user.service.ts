@@ -2,17 +2,17 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { from, map, switchMap, Observable, of } from 'rxjs';
 import { In, Repository } from 'typeorm';
-import { FriendRequest } from '../entities/friend-request.entity';
-import { UserEntity } from '../entities/user.entity';
 import { FriendRequestStatus } from '../entities/friend-request-status.enum';
+import { UserEntity } from '../entities/user.entity';
+import { FriendRequestEntity } from '../entities/friend-request.entity';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
-    @InjectRepository(FriendRequest)
-    private readonly friendRequestRepository: Repository<FriendRequest>,
+    @InjectRepository(FriendRequestEntity)
+    private readonly friendRequestRepository: Repository<FriendRequestEntity>,
   ) {}
 
   findUserById(id: string): Observable<UserEntity> {
@@ -39,7 +39,7 @@ export class UserService {
         ],
       }),
     ).pipe(
-      switchMap((friendRequest: FriendRequest) => {
+      switchMap((friendRequest: FriendRequestEntity) => {
         if (!friendRequest) return of(false);
         return of(true);
       }),
@@ -49,7 +49,7 @@ export class UserService {
   sendFriendRequest(
     receiverId: string,
     creator: UserEntity,
-  ): Observable<FriendRequest | { error: string }> {
+  ): Observable<FriendRequestEntity | { error: string }> {
     if (receiverId === creator.id)
       return of({ error: 'It is not possible to add yourself!' });
 
@@ -71,7 +71,9 @@ export class UserService {
     );
   }
 
-  getFriendRequestUserById(friendRequestId: string): Observable<FriendRequest> {
+  getFriendRequestUserById(
+    friendRequestId: string,
+  ): Observable<FriendRequestEntity> {
     return from(
       this.friendRequestRepository.findOne({ where: { id: friendRequestId } }),
     );
@@ -80,9 +82,9 @@ export class UserService {
   respondToFriendRequest(
     statusResponse: FriendRequestStatus,
     friendRequestId: string,
-  ): Observable<FriendRequest> {
+  ): Observable<FriendRequestEntity> {
     return this.getFriendRequestUserById(friendRequestId).pipe(
-      switchMap((friendRequest: FriendRequest) => {
+      switchMap((friendRequest: FriendRequestEntity) => {
         return from(
           this.friendRequestRepository.save({
             ...friendRequest,
@@ -103,9 +105,9 @@ export class UserService {
         relations: ['creator', 'receiver'],
       }),
     ).pipe(
-      switchMap((friends: FriendRequest[]) => {
+      switchMap((friends: FriendRequestEntity[]) => {
         let userIds: string[] = [];
-        friends.forEach((friend: FriendRequest) => {
+        friends.forEach((friend: FriendRequestEntity) => {
           if (friend.creator.id === currentUser.id) {
             userIds.push(friend.receiver.id);
           } else if (friend.receiver.id === currentUser.id) {

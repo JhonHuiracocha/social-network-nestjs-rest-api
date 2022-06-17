@@ -1,5 +1,5 @@
 import { IsBoolean, IsNotEmpty, IsObject, IsString } from 'class-validator';
-import { UserEntity } from '../../auth/entities/user.entity';
+import { UserEntity } from '../../users/entities/user.entity';
 
 export class CreatePostDto {
   @IsString()

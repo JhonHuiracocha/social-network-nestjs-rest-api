@@ -10,7 +10,7 @@ import { UserEntity } from './user.entity';
 import { FriendRequestStatus } from './friend-request-status.enum';
 
 @Entity('friend_requests')
-export class FriendRequest {
+export class FriendRequestEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

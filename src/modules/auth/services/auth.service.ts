@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { from, switchMap, Observable, of, map, tap } from 'rxjs';
 import { JwtService } from '@nestjs/jwt';
-import { UserEntity } from '../entities/user.entity';
-import { CreateUserDto } from '../dto/create-user.dto';
+import { UserEntity } from '../../users/entities/user.entity';
+import { CreateUserDto } from '../../users/dto/create-user.dto';
 
 @Injectable()
 export class AuthService {
@@ -44,11 +44,12 @@ export class AuthService {
       this.userRepository.findOne({ where: { email, password, status: true } }),
     ).pipe(
       map((user: UserEntity) => {
-        if (user && user.password !== password)
+        if (!user || user.password !== password)
           throw new HttpException(
-            'User or email is invalid',
-            HttpStatus.BAD_REQUEST,
+            'Incorrect email or password.',
+            HttpStatus.UNAUTHORIZED,
           );
+
         delete user.password;
         return user;
       }),
@@ -57,7 +58,6 @@ export class AuthService {
 
   login(user: UserEntity): Observable<string> {
     const { email, password } = user;
-    console.log(user);
     return this.validateUser(email, password).pipe(
       switchMap((user: UserEntity) => {
         if (user) return from(this.jwtService.signAsync({ user }));

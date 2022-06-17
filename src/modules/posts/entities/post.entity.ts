@@ -1,4 +1,3 @@
-import { UserEntity } from '../../auth/entities/user.entity';
 import {
   Column,
   CreateDateColumn,
@@ -7,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { UserEntity } from '../../users/entities/user.entity';
 
 @Entity('posts')
 export class PostEntity {
@@ -25,6 +25,8 @@ export class PostEntity {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @ManyToOne(() => UserEntity, (userEntity) => userEntity.posts, { nullable: false })
+  @ManyToOne(() => UserEntity, (userEntity) => userEntity.posts, {
+    nullable: false,
+  })
   author: UserEntity;
 }
