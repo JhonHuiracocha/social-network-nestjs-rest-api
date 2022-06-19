@@ -5,6 +5,11 @@ import { In, Repository } from 'typeorm';
 import { FriendRequestStatus } from '../entities/friend-request-status.enum';
 import { UserEntity } from '../entities/user.entity';
 import { FriendRequestEntity } from '../entities/friend-request.entity';
+import { CommentEntity } from '../../posts/entities/comment.entity';
+import { CreateCommentDto } from '../../posts/dto/create-comment.dto';
+import { PostEntity } from '../../posts/entities/post.entity';
+import { PostService } from '../../posts/services/post.service';
+import { CreatePostDto } from '../../posts/dto/create-post.dto';
 
 @Injectable()
 export class UserService {
@@ -13,6 +18,9 @@ export class UserService {
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(FriendRequestEntity)
     private readonly friendRequestRepository: Repository<FriendRequestEntity>,
+    @InjectRepository(CommentEntity)
+    private readonly commentRepository: Repository<CommentEntity>,
+    private readonly postService: PostService,
   ) {}
 
   findUserById(id: string): Observable<UserEntity> {
@@ -116,6 +124,20 @@ export class UserService {
 
         return from(this.userRepository.find({ where: { id: In(userIds) } }));
       }),
+    );
+  }
+
+  createPostComment(
+    postId: string,
+    createCommentDto: CreateCommentDto,
+  ): Observable<CommentEntity> {
+    return from(
+      this.postService.findPostById(postId).pipe(
+        switchMap((post: PostEntity) => {
+          createCommentDto.post = post;
+          return from(this.commentRepository.save(createCommentDto));
+        }),
+      ),
     );
   }
 }

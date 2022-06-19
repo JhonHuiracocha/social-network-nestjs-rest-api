@@ -18,7 +18,7 @@ import { UsersModule } from './modules/users/users.module';
       password: process.env.MYSQL_PASSWORD,
       database: process.env.MYSQL_DATABASE,
       entities: ['dist/**/*.entity.js'],
-      autoLoadEntities: true,
+      // autoLoadEntities: true,
       synchronize: true,
     }),
     AuthModule,

@@ -1,9 +1,10 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Observable, from, map } from 'rxjs';
+import { Observable, from, tap } from 'rxjs';
 import { Repository } from 'typeorm';
 import { PostEntity } from '../entities/post.entity';
 import { CreatePostDto } from '../dto/create-post.dto';
+import { UpdatePostDto } from '../dto/update-post.dto';
 
 @Injectable()
 export class PostService {
@@ -18,13 +19,43 @@ export class PostService {
 
   findPosts(take: number = 10, skip: number = 0): Observable<PostEntity[]> {
     return from(
-      this.postRepository
-        .createQueryBuilder('post')
-        .innerJoinAndSelect('post.author', 'author')
-        .orderBy('post.createdAt', 'DESC')
-        .take(take)
-        .skip(skip)
-        .getMany(),
+      this.postRepository.find({
+        where: {
+          status: true,
+        },
+        relations: {
+          author: true,
+          comments: {
+            author: true,
+          },
+        },
+        take,
+        skip,
+      }),
+    );
+  }
+
+  findPostWithRelations(id: string): Observable<PostEntity> {
+    return from(
+      this.postRepository.findOne({
+        where: {
+          id,
+          status: true,
+        },
+        relations: {
+          author: true,
+          comments: {
+            author: true,
+          },
+        },
+      }),
+    ).pipe(
+      tap((post: PostEntity) => {
+        if (!post) {
+          throw new HttpException('Post not found', HttpStatus.NOT_FOUND);
+        }
+        return post;
+      }),
     );
   }
 
@@ -35,10 +66,9 @@ export class PostService {
           id,
           status: true,
         },
-        relations: ['author'],
       }),
     ).pipe(
-      map((post: PostEntity) => {
+      tap((post: PostEntity) => {
         if (!post) {
           throw new HttpException('Post not found', HttpStatus.NOT_FOUND);
         }
@@ -51,14 +81,34 @@ export class PostService {
     return from(
       this.postRepository.find({
         where: {
-          author: { id: authorId },
+          author: {
+            id: authorId,
+          },
           status: true,
+        },
+        relations: {
+          comments: {
+            author: true,
+          },
         },
       }),
     );
   }
 
-  updatePost(id: string) {}
+  updatePost(id: string, updatePostDto: UpdatePostDto): Observable<PostEntity> {
+    return this.findPostById(id).pipe(
+      tap((post: PostEntity) => {
+        updatePostDto.id = post.id;
+        return from(this.postRepository.save(updatePostDto));
+      }),
+    );
+  }
 
-  deletePost(id: string) {}
+  deletePost(id: string): Observable<PostEntity> {
+    return this.findPostById(id).pipe(
+      tap((post: PostEntity) => {
+        return from(this.postRepository.save({ ...post, status: false }));
+      }),
+    );
+  }
 }

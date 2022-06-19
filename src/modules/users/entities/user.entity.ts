@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { FriendRequestEntity } from './friend-request.entity';
 import { PostEntity } from '../../posts/entities/post.entity';
+import { CommentEntity } from '../../posts/entities/comment.entity';
 
 @Entity('users')
 export class UserEntity {
@@ -23,7 +24,7 @@ export class UserEntity {
   @Column({ nullable: false })
   password: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, default: '' })
   imgUrl: string;
 
   @Column({ default: true })
@@ -37,6 +38,9 @@ export class UserEntity {
 
   @OneToMany(() => PostEntity, (postEntity) => postEntity.author)
   posts: PostEntity[];
+
+  @OneToMany(() => CommentEntity, (commentEntity) => commentEntity.author)
+  comments: CommentEntity[];
 
   @OneToMany(
     () => FriendRequestEntity,

@@ -5,6 +5,8 @@ import { CreateFriendRequestDto } from '../dto/create-friend-request.dto';
 import { FriendRequestStatus } from '../entities/friend-request-status.enum';
 import { FriendRequestEntity } from '../entities/friend-request.entity';
 import { UserEntity } from '../entities/user.entity';
+import { CommentEntity } from '../../posts/entities/comment.entity';
+import { CreateCommentDto } from '../../posts/dto/create-comment.dto';
 
 @Controller('users')
 export class UserController {
@@ -35,5 +37,13 @@ export class UserController {
   @Get('friends/my')
   getFriends(@Body() user: UserEntity): Observable<UserEntity[]> {
     return this.userService.getFriends(user);
+  }
+
+  @Post('post-comment/send/:postId')
+  createPostComment(
+    @Param('postId') postId: string,
+    @Body() createCommentDto: CreateCommentDto,
+  ): Observable<CommentEntity> {
+    return this.userService.createPostComment(postId, createCommentDto);
   }
 }

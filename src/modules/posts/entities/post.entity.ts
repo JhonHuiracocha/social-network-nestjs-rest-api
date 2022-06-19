@@ -3,10 +3,12 @@ import {
   CreateDateColumn,
   Entity,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { UserEntity } from '../../users/entities/user.entity';
+import { CommentEntity } from './comment.entity';
 
 @Entity('posts')
 export class PostEntity {
@@ -15,6 +17,9 @@ export class PostEntity {
 
   @Column({ type: 'text' })
   body: string;
+
+  @Column({ nullable: true, default: '' })
+  imgUrl: string;
 
   @Column({ default: true })
   status: boolean;
@@ -29,4 +34,7 @@ export class PostEntity {
     nullable: false,
   })
   author: UserEntity;
+
+  @OneToMany(() => CommentEntity, (commentEntity) => commentEntity.post)
+  comments: CommentEntity[];
 }

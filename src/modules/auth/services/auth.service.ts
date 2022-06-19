@@ -6,8 +6,8 @@ import { from, switchMap, Observable, of, map, tap } from 'rxjs';
 import { JwtService } from '@nestjs/jwt';
 import { UserEntity } from '../../users/entities/user.entity';
 import { JWTPayload } from '../interfaces/auth.interface';
-import { CreateLoginDto } from '../dto/login.dto';
-import { CreateRegisterDto } from '../dto/register.dto';
+import { CreateLoginDto } from '../dto/create-login.dto';
+import { CreateRegisterDto } from '../dto/create-register.dto';
 
 @Injectable()
 export class AuthService {
