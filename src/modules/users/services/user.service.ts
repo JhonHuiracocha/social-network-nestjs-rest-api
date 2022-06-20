@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { from, map, switchMap, Observable, of } from 'rxjs';
+import { from, switchMap, Observable, of } from 'rxjs';
 import { In, Repository } from 'typeorm';
 import { FriendRequestStatus } from '../entities/friend-request-status.enum';
 import { UserEntity } from '../entities/user.entity';
@@ -9,7 +9,7 @@ import { CommentEntity } from '../../posts/entities/comment.entity';
 import { CreateCommentDto } from '../../posts/dto/create-comment.dto';
 import { PostEntity } from '../../posts/entities/post.entity';
 import { PostService } from '../../posts/services/post.service';
-import { CreatePostDto } from '../../posts/dto/create-post.dto';
+import { ApiResponse } from '../../../core/interfaces/response.interface';
 
 @Injectable()
 export class UserService {
@@ -24,14 +24,7 @@ export class UserService {
   ) {}
 
   findUserById(id: string): Observable<UserEntity> {
-    return from(this.userRepository.findOne({ where: { id } })).pipe(
-      map((user: UserEntity) => {
-        if (!user) {
-          throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-        }
-        return user;
-      }),
-    );
+    return from(this.userRepository.findOne({ where: { id, status: true } }));
   }
 
   hasRequestBeenSentOrReceived(
@@ -40,13 +33,18 @@ export class UserService {
   ): Observable<boolean> {
     return from(
       this.friendRequestRepository.findOne({
-        where: [
-          { creator, receiver },
-          { creator: receiver, receiver: creator },
-        ],
+        where: {
+          creator: {
+            id: creator.id,
+          },
+          receiver: {
+            id: receiver.id,
+          },
+        },
       }),
     ).pipe(
       switchMap((friendRequest: FriendRequestEntity) => {
+        console.log(friendRequest);
         if (!friendRequest) return of(false);
         return of(true);
       }),
@@ -56,21 +54,43 @@ export class UserService {
   sendFriendRequest(
     receiverId: string,
     creator: UserEntity,
-  ): Observable<FriendRequestEntity | { error: string }> {
+  ): Observable<ApiResponse<FriendRequestEntity>> {
     if (receiverId === creator.id)
-      return of({ error: 'It is not possible to add yourself!' });
+      throw new HttpException(
+        { status: false, message: 'It is not possible to add yourself.' },
+        HttpStatus.CONFLICT,
+      );
 
     return this.findUserById(receiverId).pipe(
       switchMap((receiver: UserEntity) => {
+        if (!receiver)
+          throw new HttpException(
+            { status: false, message: 'The user has not been found.' },
+            HttpStatus.NOT_FOUND,
+          );
+
         return this.hasRequestBeenSentOrReceived(creator, receiver).pipe(
           switchMap((hasRequestBeenSentOrReceived: boolean) => {
             if (hasRequestBeenSentOrReceived)
-              return of({
-                error:
-                  'A friend request has already been sent of received to your account!',
-              });
+              throw new HttpException(
+                {
+                  status: false,
+                  message:
+                    'A friend request has already been sent of received to your account.',
+                },
+                HttpStatus.CONFLICT,
+              );
+
             return from(
               this.friendRequestRepository.save({ creator, receiver }),
+            ).pipe(
+              switchMap((friendRequest: FriendRequestEntity) => {
+                return of({
+                  status: true,
+                  message: 'The friend request has been sent successfully.',
+                  data: [friendRequest],
+                });
+              }),
             );
           }),
         );
@@ -89,20 +109,37 @@ export class UserService {
   respondToFriendRequest(
     statusResponse: FriendRequestStatus,
     friendRequestId: string,
-  ): Observable<FriendRequestEntity> {
+  ): Observable<ApiResponse<FriendRequestEntity>> {
     return this.getFriendRequestUserById(friendRequestId).pipe(
       switchMap((friendRequest: FriendRequestEntity) => {
+        if (!friendRequest)
+          throw new HttpException(
+            {
+              status: false,
+              message: 'The friend request has not been found.',
+            },
+            HttpStatus.NOT_FOUND,
+          );
+
         return from(
           this.friendRequestRepository.save({
             ...friendRequest,
-            status: statusResponse['status'],
+            status: statusResponse,
+          }),
+        ).pipe(
+          switchMap((friendRequest: FriendRequestEntity) => {
+            return of({
+              status: true,
+              message: 'Successfully changed friend request status.',
+              data: [friendRequest],
+            });
           }),
         );
       }),
     );
   }
 
-  getFriends(currentUser: UserEntity): Observable<UserEntity[]> {
+  getFriends(currentUser: UserEntity): Observable<ApiResponse<UserEntity>> {
     return from(
       this.friendRequestRepository.find({
         where: [
@@ -112,9 +149,10 @@ export class UserService {
         relations: ['creator', 'receiver'],
       }),
     ).pipe(
-      switchMap((friends: FriendRequestEntity[]) => {
+      switchMap((friendRequests: FriendRequestEntity[]) => {
         let userIds: string[] = [];
-        friends.forEach((friend: FriendRequestEntity) => {
+
+        friendRequests.forEach((friend: FriendRequestEntity) => {
           if (friend.creator.id === currentUser.id) {
             userIds.push(friend.receiver.id);
           } else if (friend.receiver.id === currentUser.id) {
@@ -122,7 +160,13 @@ export class UserService {
           }
         });
 
-        return from(this.userRepository.find({ where: { id: In(userIds) } }));
+        return from(
+          this.userRepository.find({ where: { id: In(userIds) } }),
+        ).pipe(
+          switchMap((friends: UserEntity[]) => {
+            return of({ status: true, data: friends });
+          }),
+        );
       }),
     );
   }
@@ -130,12 +174,20 @@ export class UserService {
   createPostComment(
     postId: string,
     createCommentDto: CreateCommentDto,
-  ): Observable<CommentEntity> {
+  ): Observable<ApiResponse<CommentEntity>> {
     return from(
       this.postService.findPostById(postId).pipe(
         switchMap((post: PostEntity) => {
           createCommentDto.post = post;
-          return from(this.commentRepository.save(createCommentDto));
+          return from(this.commentRepository.save(createCommentDto)).pipe(
+            switchMap((coment: CommentEntity) => {
+              return of({
+                status: true,
+                message: 'The comment has been created successfully.',
+                data: [coment],
+              });
+            }),
+          );
         }),
       ),
     );

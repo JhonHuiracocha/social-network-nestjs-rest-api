@@ -7,6 +7,7 @@ import { FriendRequestEntity } from '../entities/friend-request.entity';
 import { UserEntity } from '../entities/user.entity';
 import { CommentEntity } from '../../posts/entities/comment.entity';
 import { CreateCommentDto } from '../../posts/dto/create-comment.dto';
+import { ApiResponse } from '../../../core/interfaces/response.interface';
 
 @Controller('users')
 export class UserController {
@@ -16,7 +17,7 @@ export class UserController {
   sendFriendRequest(
     @Param('receiverId') receiverId: string,
     @Body() createFriendRequestDto: CreateFriendRequestDto,
-  ): Observable<FriendRequestEntity | { error: string }> {
+  ): Observable<ApiResponse<FriendRequestEntity>> {
     return this.userService.sendFriendRequest(
       receiverId,
       createFriendRequestDto.creator,
@@ -26,8 +27,8 @@ export class UserController {
   @Put('friend-request/response/:friendRequestId')
   respondToFriendRequest(
     @Param('friendRequestId') friendRequestId: string,
-    @Body() statusResponse: FriendRequestStatus,
-  ): Observable<FriendRequestEntity> {
+    @Body('status') statusResponse: FriendRequestStatus,
+  ): Observable<ApiResponse<FriendRequestEntity>> {
     return this.userService.respondToFriendRequest(
       statusResponse,
       friendRequestId,
@@ -35,7 +36,7 @@ export class UserController {
   }
 
   @Get('friends/my')
-  getFriends(@Body() user: UserEntity): Observable<UserEntity[]> {
+  getFriends(@Body() user: UserEntity): Observable<ApiResponse<UserEntity>> {
     return this.userService.getFriends(user);
   }
 
@@ -43,7 +44,7 @@ export class UserController {
   createPostComment(
     @Param('postId') postId: string,
     @Body() createCommentDto: CreateCommentDto,
-  ): Observable<CommentEntity> {
+  ): Observable<ApiResponse<CommentEntity>> {
     return this.userService.createPostComment(postId, createCommentDto);
   }
 }
