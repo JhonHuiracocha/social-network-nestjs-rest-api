@@ -1,10 +1,11 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Observable, from, tap } from 'rxjs';
-import { Repository } from 'typeorm';
+import { Observable, from, tap, catchError, switchMap, of } from 'rxjs';
+import { Repository, UpdateResult } from 'typeorm';
 import { PostEntity } from '../entities/post.entity';
 import { CreatePostDto } from '../dto/create-post.dto';
 import { UpdatePostDto } from '../dto/update-post.dto';
+import { ApiResponse } from '../../../core/interfaces/response.interface';
 
 @Injectable()
 export class PostService {
@@ -13,11 +14,26 @@ export class PostService {
     private readonly postRepository: Repository<PostEntity>,
   ) {}
 
-  createPost(createPostDto: CreatePostDto): Observable<PostEntity> {
-    return from(this.postRepository.save(createPostDto));
+  createPost(
+    createPostDto: CreatePostDto,
+  ): Observable<ApiResponse<PostEntity>> {
+    return from(this.postRepository.save(createPostDto)).pipe(
+      switchMap((post: PostEntity) => {
+        return of({
+          status: true,
+          message: 'The post has been created successfully.',
+          data: [post],
+        });
+      }),
+    );
   }
 
-  findPosts(take: number = 10, skip: number = 0): Observable<PostEntity[]> {
+  findPosts(
+    page: number = 1,
+    limit: number = 0,
+  ): Observable<ApiResponse<PostEntity>> {
+    const skip: number = (page - 1) * limit;
+
     return from(
       this.postRepository.find({
         where: {
@@ -29,13 +45,23 @@ export class PostService {
             author: true,
           },
         },
-        take,
+        take: limit,
         skip,
+      }),
+    ).pipe(
+      switchMap((posts: PostEntity[]) => {
+        return of({
+          status: true,
+          data: posts,
+          info: {
+            page,
+          },
+        });
       }),
     );
   }
 
-  findPostWithRelations(id: string): Observable<PostEntity> {
+  findPostWithRelations(id: string): Observable<ApiResponse<PostEntity>> {
     return from(
       this.postRepository.findOne({
         where: {
@@ -50,11 +76,20 @@ export class PostService {
         },
       }),
     ).pipe(
-      tap((post: PostEntity) => {
-        if (!post) {
-          throw new HttpException('Post not found', HttpStatus.NOT_FOUND);
-        }
-        return post;
+      switchMap((post: PostEntity) => {
+        if (!post)
+          throw new HttpException(
+            {
+              status: false,
+              message: 'The post has not been found.',
+            },
+            HttpStatus.NOT_FOUND,
+          );
+
+        return of({
+          status: true,
+          data: [post],
+        });
       }),
     );
   }
@@ -67,17 +102,10 @@ export class PostService {
           status: true,
         },
       }),
-    ).pipe(
-      tap((post: PostEntity) => {
-        if (!post) {
-          throw new HttpException('Post not found', HttpStatus.NOT_FOUND);
-        }
-        return post;
-      }),
     );
   }
 
-  getAuthorPosts(authorId: string): Observable<PostEntity[]> {
+  getAuthorPosts(authorId: string): Observable<ApiResponse<PostEntity>> {
     return from(
       this.postRepository.find({
         where: {
@@ -92,22 +120,58 @@ export class PostService {
           },
         },
       }),
-    );
-  }
-
-  updatePost(id: string, updatePostDto: UpdatePostDto): Observable<PostEntity> {
-    return this.findPostById(id).pipe(
-      tap((post: PostEntity) => {
-        updatePostDto.id = post.id;
-        return from(this.postRepository.save(updatePostDto));
+    ).pipe(
+      switchMap((posts: PostEntity[]) => {
+        return of({
+          status: true,
+          message: 'Find post @take & @skip.',
+          data: posts,
+        });
       }),
     );
   }
 
-  deletePost(id: string): Observable<PostEntity> {
+  updatePost(
+    id: string,
+    updatePostDto: UpdatePostDto,
+  ): Observable<ApiResponse<PostEntity>> {
     return this.findPostById(id).pipe(
-      tap((post: PostEntity) => {
-        return from(this.postRepository.save({ ...post, status: false }));
+      switchMap((post: PostEntity) => {
+        if (!post)
+          throw new HttpException(
+            { status: false, message: 'The post has not been found.' },
+            HttpStatus.NOT_FOUND,
+          );
+
+        return from(this.postRepository.update(id, updatePostDto)).pipe(
+          switchMap((updateResult: UpdateResult) => {
+            return of({
+              status: true,
+              message: 'The post has been updated successfully.',
+            });
+          }),
+        );
+      }),
+    );
+  }
+
+  deletePost(id: string): Observable<ApiResponse<PostEntity>> {
+    return this.findPostById(id).pipe(
+      switchMap((post: PostEntity) => {
+        if (!post)
+          throw new HttpException(
+            { status: false, message: 'The post has not been found.' },
+            HttpStatus.NOT_FOUND,
+          );
+
+        return from(this.postRepository.update(id, { status: false })).pipe(
+          switchMap((updateResult: UpdateResult) => {
+            return of({
+              status: true,
+              message: 'The post has been deleted successfully.',
+            });
+          }),
+        );
       }),
     );
   }
